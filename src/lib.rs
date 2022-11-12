@@ -6,7 +6,6 @@ use syn::{
     NestedMeta,
 };
 
-const ONE_MONTH_IN_SECONDS: u64 = 2592_000;
 const ONE_MINUTE_IN_SECONDS: u64 = 60;
 
 fn get_lit_int(lit: Option<&Lit>, default_value: u64) -> u64 {
@@ -79,7 +78,6 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
         }
     }
 
-    let exp = get_lit_int(hashmap.get("exp"), ONE_MONTH_IN_SECONDS);
     let leeway = get_lit_int(hashmap.get("leeway"), ONE_MINUTE_IN_SECONDS);
     let cookie_key = get_lit_str(hashmap.get("cookie"), "".to_string());
     let query_key = get_lit_str(hashmap.get("query"), "".to_string());
@@ -110,8 +108,8 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
 
         #[derive(Debug, #serder::Deserialize,#serder::Serialize)]
         #vis struct #guard_claim {
-            exp: u64,
-            iat: u64,
+            // exp: u64,
+            // iat: u64,
             user: #guard_type
         }
     };
@@ -129,8 +127,8 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
             pub fn sign(user: #guard_type) -> String {
                 let now = #std_time::SystemTime::now().duration_since(#std_time::UNIX_EPOCH).unwrap().as_secs();
                 let payload = #guard_claim {
-                    exp: #exp + now,
-                    iat: now,
+                    // exp: #exp + now,
+                    // iat: now,
                     user,
                 };
 
@@ -139,6 +137,8 @@ fn parse_invocation(attr: Vec<NestedMeta>, input: DeriveInput) -> TokenStream {
 
             pub fn decode(token: String) -> #Result<#guard_claim> {
                 let mut validation = #jwt::Validation::default();
+                validation.required_spec_claims = std::collections::HashSet::new();
+                validation.validate_exp = false;
                 validation.leeway = #leeway;
 
                 let result = #jwt::decode::<#guard_claim>(&token, &#jwt::DecodingKey::from_secret((#secrete_value).as_bytes()), &validation);
